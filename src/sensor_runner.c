@@ -31,14 +31,14 @@ inline void print_usage(const char * pname)
 }
 
 /* Sending POST request */
-void request (char* hostname, char* api, char* parameters)
+char * request (char* hostname, char* api, char* parameters)
 {
 	struct sockaddr_in sin;
     int sock;
     if ((sock = socket (AF_INET, SOCK_STREAM, 0)) < 0) 
     {
 		perror("Network error [socket]");
-		return;
+		return NULL;
 	}
 	
     sin.sin_family = AF_INET;
@@ -49,7 +49,7 @@ void request (char* hostname, char* api, char* parameters)
     if(host_addr == NULL) 
     {
 		perror("Network error [hostname]");
-		return;
+		return NULL;
     }
     
     sin.sin_addr.s_addr = *((int*)*host_addr->h_addr_list) ;
@@ -57,7 +57,7 @@ void request (char* hostname, char* api, char* parameters)
     if( connect (sock,(const struct sockaddr *)&sin, sizeof(struct sockaddr_in) ) < 0 ) 
     {
 		perror("Network error [connect]");
-		return;
+		return NULL;
     }
     
 	SEND_RQ("POST ");
@@ -81,9 +81,40 @@ void request (char* hostname, char* api, char* parameters)
 	SEND_RQ("\r\n");
 	
 	printf("POST sent successfully\n");
+	
+	char c1[256];
+	read(sock, c1, 2048);
+	c1[strlen(c1)-1] = '\0';
+	
+	printf("%s\n", c1);
+	
+	char * tmp_len = strstr(c1, "Content-Length: ");
+	tmp_len += strlen("Content-Length");
+	int pos = tmp_len - c1;
+	
+	char * start_p = c1 + (pos+2);
+	char * end_p = start_p;
+	while(*(end_p + 1) != '\r' )
+		end_p += 1;
+	
+	int c_len = 0;
+	int mul = 1;
+	while(end_p != start_p)
+	{
+		c_len += ((*end_p) - '\0') * mul;
+		mul *= 10;
+		end_p -= 1;
+	}
+	
+	char * buff = (char *) malloc(sizeof(char) * c_len);
+	/* CHECK !! */
+	start_p = &c1[strlen(c1) - c_len - 2];
+	memcpy(buff, start_p, c_len);
+	
+	return buff;
 }
 
-void register_sensor(struct sensor_info_t sinfo)
+char * register_sensor(struct sensor_info_t sinfo)
 {
 	char * result = (char *) malloc(sizeof(char) * 4096);
 	
@@ -125,8 +156,8 @@ void register_sensor(struct sensor_info_t sinfo)
 	
 	printf("Registering sensor [%s]\n", sinfo.name);
 	printf("%s\n", result);
-	// send_post(result, "monitor/sensor/index.php");
-	request(monitor_address, "monitor/sensor/index.php", result);
+	
+	return request(monitor_address, "monitor/sensor/index.php", result);
 }
 
 /* prints prompt help */
