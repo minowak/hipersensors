@@ -106,10 +106,14 @@ char * request (char* hostname, char* api, char* parameters)
 		end_p -= 1;
 	}
 	
-	char * buff = (char *) malloc(sizeof(char) * c_len);
+	if(c_len == 0)
+		return NULL;
+	
+	char * buff = (char *) malloc(sizeof(char) * (c_len + 1));
 	/* CHECK !! */
 	start_p = &c1[strlen(c1) - c_len - 2];
 	memcpy(buff, start_p, c_len);
+	buff[c_len] = '\0';
 	
 	return buff;
 }
@@ -379,7 +383,12 @@ int main(int argc, char ** argv)
 	/* Registering sensors */
 	for(i = 0 ; i < sensor_count ; i++)
 	{
-		register_sensor(sensors_info[i]);
+		char * sid = register_sensor(sensors_info[i]);
+		if(sid == NULL)
+			printf("No response from serwer. Setting id = -1\n");
+		else
+			sensors_info[i].id = sid;
+		
 	}
 	
 	/* Starting thread */
