@@ -66,7 +66,7 @@ void request (char* hostname, char* api, char* parameters)
 	SEND_RQ("User-Agent: Mozilla/4.0\r\n");
 
 	char content_header[100];
-	sprintf(content_header,"Content-Length: %d\r\n", strlen(parameters) );
+	sprintf(content_header,"Content-Length: %d\r\n", strlen(parameters) + 2);
 	SEND_RQ(content_header);
 	SEND_RQ("Accept-Language: en-us\r\n");
 	SEND_RQ("Accept-Encoding: gzip, deflate\r\n");
@@ -77,7 +77,6 @@ void request (char* hostname, char* api, char* parameters)
 
 	SEND_RQ("\r\n");
 	SEND_RQ("\r\n");
-	SEND_RQ("sensor=");
 	SEND_RQ(parameters);
 	SEND_RQ("\r\n");
 	
@@ -161,7 +160,7 @@ void register_sensor(struct sensor_info_t sinfo)
 {
 	char * result = (char *) malloc(sizeof(char) * 4096);
 	
-	strcpy(result, "{");
+	strcpy(result, "sensor={");
 	
 	/* ID */
 	strcat(result, "\"id\":\"");
@@ -195,7 +194,6 @@ void register_sensor(struct sensor_info_t sinfo)
 	strcat(result, "\"type\":\"");
 	strcat(result, "null");
 	strcat(result, "\"");
-	
 	strcat(result, "}");
 	
 	printf("Registering sensor [%s]\n", sinfo.name);
