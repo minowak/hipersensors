@@ -26,7 +26,7 @@ inline void print_usage(const char * pname)
 	printf("usage: %s sensor1 sensor2 ...\n", pname);
 }
 
-void send_post(const char * json)
+void send_post(const char * json, const char * monitor_address)
 {
 	int sockfd = 0;
 	char buffer[4096];
@@ -69,8 +69,6 @@ void register_sensor(struct sensor_info_t sinfo)
 {
 	char * result = (char *) malloc(sizeof(char) * 4096);
 	
-	printf("Registering sensor\n");
-	
 	strcpy(result, "{");
 	
 	/* ID */
@@ -108,7 +106,14 @@ void register_sensor(struct sensor_info_t sinfo)
 	
 	strcat(result, "}");
 	
-	send_post(result);
+	char * tmp_addr = (char *)malloc(sizeof(char) * strlen(monitor_address));
+	strcpy(tmp_addr, monitor_address);
+	
+	printf("Registering sensor [%s]\n", tmp_addr);
+	
+	send_post(result, tmp_addr);
+	
+	free(tmp_addr);
 }
 
 /* prints prompt help */
@@ -206,7 +211,14 @@ void * runner(void * unused)
 			fprintf(fp, "%s\n", to_json(result));
 			fclose(fp);
 			
-			send_post(to_json(result));
+			char * tmp_addr = (char *)malloc(sizeof(char) * 256);
+			strcpy(tmp_addr, monitor_address);
+			strcat(tmp_addr, "/sensors/");
+			strcat(tmp_addr, sensors_info[i].id);
+			
+			send_post(to_json(result), tmp_addr);
+			
+			free(tmp_addr);
 			
 			sleep(sleep_times[i]);
 			pthread_testcancel();
