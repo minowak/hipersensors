@@ -13,9 +13,8 @@ LDFLAGS=-lpthread
 
 all: libs runner
 
-libs: $(LIBSRC) $(LIBOBJ)
-	$(CC) $(CFLAGS) -fPIC -c $^ $(LDFLAGS) 
-	$(CC) $(CFLAGS) -shared -fPIC -o ./lib/cpusensor.so $(LIBOBJ) $(LDFLAGS)
+libs: $(LIBSRC)
+	$(CC) $(CFLAGS) -shared -fPIC $^ $(LDFLAGS) -o ./lib/cpusensor.so
 
 runner: $(OBJ)
 	$(CC) $(CFLAGS) $^ -o $(NAME) -ldl $(LDFLAGS)

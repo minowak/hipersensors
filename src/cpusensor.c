@@ -111,8 +111,6 @@ struct measurement_object_t get_measurement()
 	strcpy(result.data_feed[1].what, mem);
 	free(mem);
 			
-	printf("cpusensor started\n");
-
 	return result;
 }
 
