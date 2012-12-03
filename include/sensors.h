@@ -17,6 +17,17 @@ struct measurement_object_t
 	int df_len;
 };
 
+struct sensor_info_t
+{
+	char * id;
+	char * name;
+	char * href;
+	char * measure;
+	char * data_type;
+	int frequency;
+	char * resource;	
+};
+
 struct measurement_object_t get_measurement(void);
 typedef struct measurement_object_t (*sensor_pointer)(void);
 
