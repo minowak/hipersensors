@@ -65,6 +65,52 @@ void send_post(const char * json)
 	close(sockfd);
 }
 
+void register_sensor(struct sensor_info_t sinfo)
+{
+	char * result = (char *) malloc(sizeof(char) * 4096);
+	
+	printf("Registering sensor\n");
+	
+	strcpy(result, "{");
+	
+	/* ID */
+	strcat(result, "\"id\":\"");
+	strcat(result, sinfo.id);
+	strcat(result, "\",");
+	/* NAME */
+	strcat(result, "\"name\":\"");
+	strcat(result, sinfo.name);
+	strcat(result, "\",");
+	/* HREF */
+	strcat(result, "\"href\":\"");
+	strcat(result, sinfo.href);
+	strcat(result, "\",");
+	/* MEASURE */
+	strcat(result, "\"measure\":\"");
+	strcat(result, sinfo.measure);
+	strcat(result, "\",");
+	/* DATA TYPE */
+	strcat(result, "\"dataType\":\"");
+	strcat(result, sinfo.data_type);
+	strcat(result, "\",");
+	/* FREQUENCY */
+	strcat(result, "\"frequency\":\"");
+	strcat(result, "0");
+	strcat(result, "\",");
+	/* RESOURCE */
+	strcat(result, "\"resource\":\"");
+	strcat(result, sinfo.resource);
+	strcat(result, "\",");
+	/* TYPE */
+	strcat(result, "\"type\":\"");
+	strcat(result, "null");
+	strcat(result, "\"");
+	
+	strcat(result, "}");
+	
+	send_post(result);
+}
+
 /* prints prompt help */
 inline void print_help()
 {
@@ -276,7 +322,7 @@ int main(int argc, char ** argv)
 	/* Registering sensors */
 	for(i = 0 ; i < sensor_count ; i++)
 	{
-		//sensors_info[i] = register_sensor(
+		register_sensor(sensors_info[i]);
 	}
 	
 	/* Starting thread */
