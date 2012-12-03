@@ -12,12 +12,11 @@
 sensor_pointer * sensors;
 unsigned int sensor_count;
 void ** handle;
-char ** sensor_names;
 short int * sensor_states;
 
-char sensor_id[255];
-char sensor_uri[255];
 char monitor_address[255];
+
+struct sensor_info_t * sensors_info;
 
 volatile unsigned int * sleep_times;
 
@@ -153,8 +152,8 @@ void * runner(void * unused)
 				
 			struct measurement_object_t result = (sensors[i])();
 			
-			result.id = sensor_id;
-			result.sensor = sensor_uri;
+			result.id = sensors_info[i].id;
+			result.sensor = sensors_info[i].href;
 			
 			/* log */
 			FILE * fp = fopen("results", "a");
@@ -191,14 +190,14 @@ int main(int argc, char ** argv)
 		return EXIT_SUCCESS;
 	}
 	
-	fscanf(sfile, "%s %s %s", sensor_id, sensor_uri, monitor_address);
+	fscanf(sfile, "%s", monitor_address);
 	
 	fclose(sfile);
 
 	printf("Sensors: %d\n", sensor_count);
 	printf("Allocating sensor memory ...");
 	sensors = (sensor_pointer *)malloc(sizeof(sensor_pointer) * (sensor_count));
-	sensor_names = (char **)malloc(sizeof(char *) * sensor_count);
+	sensors_info = (struct sensor_info_t *)malloc(sizeof(struct sensor_info_t) * sensor_count);
 	sensor_states = (short int *)malloc(sizeof(short int) * sensor_count);
 	sleep_times = (unsigned int *)malloc(sizeof(unsigned int) * sensor_count);
 	printf("OK\n");
@@ -221,7 +220,13 @@ int main(int argc, char ** argv)
 		}
 
 		sensors[i-1] = dlsym(handle[i-1], "get_measurement");
-		sensor_names[i-1] = lib_name;
+		
+		sensors_info[i-1].name = lib_name;
+		sensors_info[i-1].id = "-1";
+		sensors_info[i-1].href = "wtfgoeshere";
+		sensors_info[i-1].resource = "wtfgoeshere";
+		sensors_info[i-1].frequency = 0;
+		
 		sensor_states[i-1] = 1;
 		sleep_times[i-1] = 5;
 		
@@ -234,6 +239,7 @@ int main(int argc, char ** argv)
 		printf("OK\n");
 	}
 	
+	/* Testing */
 	printf("Testing sensors:\n");
 	for(i = 0 ; i < sensor_count ; i++)
 	{
@@ -244,7 +250,11 @@ int main(int argc, char ** argv)
 			return EXIT_FAILURE;
 		}
 		
-		struct measurement_object_t result = sensors[i]();
+		struct measurement_object_t result = (sensors[i])();
+		
+		/* Fill sensor info */
+		sensors_info[i].measure = result.measure;
+		sensors_info[i].data_type = result.data_type;
 		
 		printf("ID        : %s\n", result.id);
 		printf("Sensor    : %s\n", result.sensor);
@@ -262,6 +272,12 @@ int main(int argc, char ** argv)
 		
 		printf("OK\n\n");
 	} 
+	
+	/* Registering sensors */
+	for(i = 0 ; i < sensor_count ; i++)
+	{
+		//sensors_info[i] = register_sensor(
+	}
 	
 	/* Starting thread */
 	printf("Starting runner thread ...");
@@ -290,7 +306,7 @@ int main(int argc, char ** argv)
 			for(i = 0 ; i < sensor_count ; i++)
 			{
 				printf("Nr \t\tName\t\t\t\tPeriod\t\tState\n");
-				printf("%d)\t\t%s\t\t%ds\t\t", i, sensor_names[i], sleep_times[i]);
+				printf("%d)\t\t%s\t\t%ds\t\t", i, sensors_info[i].name, sleep_times[i]);
 				if(sensor_states[i] == 1)
 					printf("ENABLED\n");
 				else
@@ -342,7 +358,7 @@ int main(int argc, char ** argv)
 	}
 	
 	free(sensors);
-	free(sensor_names);
+	free(sensors_info);
 	free(sensor_states);
 	free((void *)sleep_times);
 
