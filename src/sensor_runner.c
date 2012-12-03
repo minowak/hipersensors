@@ -10,6 +10,9 @@
 #include <netdb.h>
 #include "sensors.h"
 
+#define SEND_RQ(MSG) \
+  send(sock,MSG,strlen(MSG),0);
+
 sensor_pointer * sensors;
 unsigned int sensor_count;
 void ** handle;
@@ -27,12 +30,67 @@ inline void print_usage(const char * pname)
 	printf("usage: %s sensor1 sensor2 ...\n", pname);
 }
 
+void request (char* hostname, char* api, char* parameters)
+{
+	struct sockaddr_in sin;
+    int sock;
+    if ((sock = socket (AF_INET, SOCK_STREAM, 0)) < 0) 
+    {
+		perror("Network error [socket]");
+		return;
+	}
+	
+    sin.sin_family = AF_INET;
+    sin.sin_port = htons( (unsigned short) 80);
+
+    struct hostent * host_addr = gethostbyname(hostname);
+    
+    if(host_addr == NULL) 
+    {
+		perror("Network error [hostname]");
+		return;
+    }
+    
+    sin.sin_addr.s_addr = *((int*)*host_addr->h_addr_list) ;
+
+    if( connect (sock,(const struct sockaddr *)&sin, sizeof(struct sockaddr_in) ) < 0 ) 
+    {
+		perror("Network error [connect]");
+		return;
+    }
+    
+	SEND_RQ("POST ");
+	SEND_RQ(api);
+	SEND_RQ(" HTTP/1.0\r\n");
+	SEND_RQ("Accept: */*\r\n");
+	SEND_RQ("User-Agent: Mozilla/4.0\r\n");
+
+	char content_header[100];
+	sprintf(content_header,"Content-Length: %d\r\n", strlen(parameters) );
+	SEND_RQ(content_header);
+	SEND_RQ("Accept-Language: en-us\r\n");
+	SEND_RQ("Accept-Encoding: gzip, deflate\r\n");
+	SEND_RQ("Host: ");
+	SEND_RQ("hostname");
+	SEND_RQ("\r\n");
+	SEND_RQ("Content-Type: application/x-www-form-urlencoded\r\n");
+
+	SEND_RQ("\r\n");
+	SEND_RQ("\r\n");
+	SEND_RQ("sensor=");
+	SEND_RQ(parameters);
+	SEND_RQ("\r\n");
+	
+	printf("POST sent successfully\n");
+}
+
 char * send_post(const char * json, const char * page)
 {
-	int sockfd = 0;
+	int sock = 0;
 	char buffer[4096];
 	struct sockaddr_in serv_addr;
-	if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+	if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+	if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
 		perror("Network error [socket]");
 		return NULL;
@@ -56,21 +114,43 @@ char * send_post(const char * json, const char * page)
          	"Content-length: %d\r\n\r\n"
          	"%s\r\n", page, "sensor", (unsigned int)strlen(json), json); 
 	
-	if(connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+	if(connect(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
 	{
 		perror("Network error [connect]");
 		return NULL;
 	}
 	
-	if(write(sockfd, buffer, sizeof(buffer)) < 0)
+	SEND_RQ("POST ");
+	SEND_RQ(page);
+	SEND_RQ(" HTTP/1.0\r\n");
+	SEND_RQ("Accept: */*\r\n");
+	SEND_RQ("User-Agent: Mozilla/4.0\r\n");
+
+	char content_header[100];
+	sprintf(content_header,"Content-Length: %d\r\n", strlen(json));
+	SEND_RQ(content_header);
+	SEND_RQ("Accept-Language: en-us\r\n");
+	SEND_RQ("Accept-Encoding: gzip, deflate\r\n");
+	SEND_RQ("Host: ");
+	SEND_RQ("hostname");
+	SEND_RQ("\r\n");
+	SEND_RQ("Content-Type: application/x-www-form-urlencoded\r\n");
+
+	SEND_RQ("\r\n");
+	SEND_RQ("\r\n");
+	SEND_RQ("sensor=");
+	SEND_RQ(json);
+	SEND_RQ("\r\n");
+	
+	/*if(write(sockfd, buffer, sizeof(buffer)) < 0)
 	{
 		perror("Network error [send]");
 		return NULL;
-	}
+	} */
 
 	/* Read response */
 
-	close(sockfd);
+	close(sock);
 	
 	/* Response */
 	printf("POST sent successfully\n");
@@ -119,7 +199,9 @@ void register_sensor(struct sensor_info_t sinfo)
 	strcat(result, "}");
 	
 	printf("Registering sensor [%s]\n", sinfo.name);
-	send_post(result, "monitor/sensor/index.php");
+	printf("%s\n", result);
+	// send_post(result, "monitor/sensor/index.php");
+	request(monitor_address, "monitor/sensor/index.php", result);
 }
 
 /* prints prompt help */
@@ -223,7 +305,7 @@ void * runner(void * unused)
 			strcat(tmp_addr, "/index.php");
 			
 			printf("Sending POST to %s\n", tmp_addr);
-			send_post(to_json(result), tmp_addr);
+		//	send_post(to_json(result), tmp_addr);
 			
 			free(tmp_addr);
 			
