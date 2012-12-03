@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include "sensors.h"
 
 sensor_pointer * sensors;
@@ -26,43 +27,54 @@ inline void print_usage(const char * pname)
 	printf("usage: %s sensor1 sensor2 ...\n", pname);
 }
 
-void send_post(const char * json, const char * monitor_address)
+char * send_post(const char * json, const char * page)
 {
 	int sockfd = 0;
 	char buffer[4096];
 	struct sockaddr_in serv_addr;
 	if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
-		perror("Network error");
-		return;
+		perror("Network error [socket]");
+		return NULL;
 	}
 	
 	memset(&serv_addr, 0, sizeof(serv_addr));
 	
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = inet_addr(monitor_address);
+	bzero( &(serv_addr.sin_zero), 8 );
 	serv_addr.sin_port = htons(80);
+	
+	char tmp_json[1024];
+	strcpy(tmp_json, "sensor=");
+	strcat(tmp_json, json);
 	
 	sprintf(buffer,
          	"POST %s HTTP/1.0\r\n"
          	"Host: %s\r\n"     
          	"Content-type: application/x-www-form-urlencoded\r\n"
          	"Content-length: %d\r\n\r\n"
-         	"%s\r\n", "sensor", monitor_address, (unsigned int)strlen(json), json); 
+         	"%s\r\n", page, "sensor", (unsigned int)strlen(json), json); 
 	
 	if(connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
 	{
-		perror("Network error");
-		return;
+		perror("Network error [connect]");
+		return NULL;
 	}
 	
-	if(send(sockfd, buffer, sizeof(buffer), 0) < 0)
+	if(write(sockfd, buffer, sizeof(buffer)) < 0)
 	{
-		perror("Network error");
-		return;
+		perror("Network error [send]");
+		return NULL;
 	}
-	
+
+	/* Read response */
+
 	close(sockfd);
+	
+	/* Response */
+	printf("POST sent successfully\n");
+	return NULL;
 }
 
 void register_sensor(struct sensor_info_t sinfo)
@@ -106,14 +118,8 @@ void register_sensor(struct sensor_info_t sinfo)
 	
 	strcat(result, "}");
 	
-	char * tmp_addr = (char *)malloc(sizeof(char) * strlen(monitor_address));
-	strcpy(tmp_addr, monitor_address);
-	
-	printf("Registering sensor [%s]\n", tmp_addr);
-	
-	send_post(result, tmp_addr);
-	
-	free(tmp_addr);
+	printf("Registering sensor [%s]\n", sinfo.name);
+	send_post(result, "monitor/sensor");
 }
 
 /* prints prompt help */
@@ -212,10 +218,10 @@ void * runner(void * unused)
 			fclose(fp);
 			
 			char * tmp_addr = (char *)malloc(sizeof(char) * 256);
-			strcpy(tmp_addr, monitor_address);
-			strcat(tmp_addr, "/sensors/");
+			strcpy(tmp_addr, "monitor/sensor/");
 			strcat(tmp_addr, sensors_info[i].id);
 			
+			printf("Sending POST to %s\n", tmp_addr);
 			send_post(to_json(result), tmp_addr);
 			
 			free(tmp_addr);
