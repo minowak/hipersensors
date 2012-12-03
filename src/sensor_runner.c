@@ -119,7 +119,7 @@ void register_sensor(struct sensor_info_t sinfo)
 	strcat(result, "}");
 	
 	printf("Registering sensor [%s]\n", sinfo.name);
-	send_post(result, "monitor/sensor");
+	send_post(result, "monitor/sensor/index.php");
 }
 
 /* prints prompt help */
@@ -220,6 +220,7 @@ void * runner(void * unused)
 			char * tmp_addr = (char *)malloc(sizeof(char) * 256);
 			strcpy(tmp_addr, "monitor/sensor/");
 			strcat(tmp_addr, sensors_info[i].id);
+			strcat(tmp_addr, "/index.php");
 			
 			printf("Sending POST to %s\n", tmp_addr);
 			send_post(to_json(result), tmp_addr);
