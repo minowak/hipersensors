@@ -30,6 +30,7 @@ inline void print_usage(const char * pname)
 	printf("usage: %s sensor1 sensor2 ...\n", pname);
 }
 
+/* Sending POST request */
 void request (char* hostname, char* api, char* parameters)
 {
 	struct sockaddr_in sin;
@@ -66,7 +67,7 @@ void request (char* hostname, char* api, char* parameters)
 	SEND_RQ("User-Agent: Mozilla/4.0\r\n");
 
 	char content_header[100];
-	sprintf(content_header,"Content-Length: %d\r\n", strlen(parameters) + 2);
+	sprintf(content_header,"Content-Length: %d\r\n", strlen(parameters));
 	SEND_RQ(content_header);
 	SEND_RQ("Accept-Language: en-us\r\n");
 	SEND_RQ("Accept-Encoding: gzip, deflate\r\n");
@@ -75,85 +76,11 @@ void request (char* hostname, char* api, char* parameters)
 	SEND_RQ("\r\n");
 	SEND_RQ("Content-Type: application/x-www-form-urlencoded\r\n");
 
-	SEND_RQ("\r\n");
 	SEND_RQ("\r\n");
 	SEND_RQ(parameters);
 	SEND_RQ("\r\n");
 	
 	printf("POST sent successfully\n");
-}
-
-char * send_post(const char * json, const char * page)
-{
-	int sock = 0;
-	char buffer[4096];
-	struct sockaddr_in serv_addr;
-	if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-	if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-	{
-		perror("Network error [socket]");
-		return NULL;
-	}
-	
-	memset(&serv_addr, 0, sizeof(serv_addr));
-	
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = inet_addr(monitor_address);
-	bzero( &(serv_addr.sin_zero), 8 );
-	serv_addr.sin_port = htons(80);
-	
-	char tmp_json[1024];
-	strcpy(tmp_json, "sensor=");
-	strcat(tmp_json, json);
-	
-	sprintf(buffer,
-         	"POST %s HTTP/1.0\r\n"
-         	"Host: %s\r\n"     
-         	"Content-type: application/x-www-form-urlencoded\r\n"
-         	"Content-length: %d\r\n\r\n"
-         	"%s\r\n", page, "sensor", (unsigned int)strlen(json), json); 
-	
-	if(connect(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
-	{
-		perror("Network error [connect]");
-		return NULL;
-	}
-	
-	SEND_RQ("POST ");
-	SEND_RQ(page);
-	SEND_RQ(" HTTP/1.0\r\n");
-	SEND_RQ("Accept: */*\r\n");
-	SEND_RQ("User-Agent: Mozilla/4.0\r\n");
-
-	char content_header[100];
-	sprintf(content_header,"Content-Length: %d\r\n", strlen(json));
-	SEND_RQ(content_header);
-	SEND_RQ("Accept-Language: en-us\r\n");
-	SEND_RQ("Accept-Encoding: gzip, deflate\r\n");
-	SEND_RQ("Host: ");
-	SEND_RQ("hostname");
-	SEND_RQ("\r\n");
-	SEND_RQ("Content-Type: application/x-www-form-urlencoded\r\n");
-
-	SEND_RQ("\r\n");
-	SEND_RQ("\r\n");
-	SEND_RQ("sensor=");
-	SEND_RQ(json);
-	SEND_RQ("\r\n");
-	
-	/*if(write(sockfd, buffer, sizeof(buffer)) < 0)
-	{
-		perror("Network error [send]");
-		return NULL;
-	} */
-
-	/* Read response */
-
-	close(sock);
-	
-	/* Response */
-	printf("POST sent successfully\n");
-	return NULL;
 }
 
 void register_sensor(struct sensor_info_t sinfo)
