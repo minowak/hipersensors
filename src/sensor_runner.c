@@ -82,18 +82,34 @@ char * request (char* hostname, char* api, char* parameters)
 	
 	printf("POST sent successfully\n");
 	
-	char c1[256];
+	/* Get response */
+	char c1[2048];
 	read(sock, c1, 2048);
 	c1[strlen(c1)-1] = '\0';
 	
+	char * start_p;
+	char * end_p;
+	
 	printf("%s\n", c1);
 	
-	char * tmp_len = strstr(c1, "Content-Length: ");
-	tmp_len += strlen("Content-Length");
+	/* Check for errors */
+	char * tmp_len = strstr(c1, "HTTP/1.1 ");
+	if(tmp_len == NULL)
+		tmp_len = strstr(c1, "HTTP/1.0 ");
+	tmp_len += strlen("HTTP/1.1 ");
 	int pos = tmp_len - c1;
+
+	printf("pos=%d\n", pos);
+
+	if(!(c1[pos] == '2' && c1[pos + 1] == '0' && c1[pos + 2] == '0'))
+		return NULL;
 	
-	char * start_p = c1 + (pos+2);
-	char * end_p = start_p;
+	tmp_len = strstr(c1, "Content-Length: ");
+	tmp_len += strlen("Content-Length");
+	pos = tmp_len - c1;
+	
+	start_p = c1 + (pos+2);
+	end_p = start_p;
 	while(*(end_p + 1) != '\r' )
 		end_p += 1;
 	
