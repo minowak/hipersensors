@@ -221,7 +221,7 @@ char * to_json(const struct measurement_object_t r)
 	strcat(result, r.data_type);
 	strcat(result, "\"");	*/
 	
-	strcat(result, ", \"data\":[");
+	strcat(result, "\"data\":[");
 	
 	for(i = 0 ; i < r.df_len ; i++)
 	{
@@ -376,6 +376,7 @@ int main(int argc, char ** argv)
 		struct measurement_object_t result = (sensors[i])();
 		
 		/* Fill sensor info */
+		sensors_info[i].name = result.sensor;
 		sensors_info[i].measure = result.measure;
 		sensors_info[i].data_type = result.data_type;
 		
@@ -433,7 +434,7 @@ int main(int argc, char ** argv)
 		{
 			for(i = 0 ; i < sensor_count ; i++)
 			{
-				printf("Nr \t\tName\t\t\t\tPeriod\t\tState\n");
+				printf("Nr \t\tName\t\t\tPeriod\t\tState\n");
 				printf("%d)\t\t%s\t\t%ds\t\t", i, sensors_info[i].name, sleep_times[i]);
 				if(sensor_states[i] == 1)
 					printf("ENABLED\n");
