@@ -80,7 +80,7 @@ char * request (char* hostname, char* api, char* parameters)
 	SEND_RQ(parameters);
 	SEND_RQ("\r\n");
 	
-	printf("POST sent successfully\n");
+//	printf("POST sent successfully\n");
 	
 	/* Get response */
 	char c1[2048];
@@ -90,16 +90,12 @@ char * request (char* hostname, char* api, char* parameters)
 	char * start_p;
 	char * end_p;
 	
-	printf("%s\n", c1);
-	
 	/* Check for errors */
 	char * tmp_len = strstr(c1, "HTTP/1.1 ");
 	if(tmp_len == NULL)
 		tmp_len = strstr(c1, "HTTP/1.0 ");
 	tmp_len += strlen("HTTP/1.1 ");
 	int pos = tmp_len - c1;
-
-	printf("pos=%d\n", pos);
 
 	if(!(c1[pos] == '2' && c1[pos + 1] == '0' && c1[pos + 2] == '0'))
 		return NULL;
@@ -175,7 +171,7 @@ char * register_sensor(struct sensor_info_t sinfo)
 	strcat(result, "}");
 	
 	printf("Registering sensor [%s]\n", sinfo.name);
-	printf("%s\n", result);
+	//printf("%s\n", result);
 	
 	return request(monitor_address, "monitor/sensor/index.php", result);
 }
@@ -197,29 +193,6 @@ char * to_json(const struct measurement_object_t r)
 	int i;
 	
 	strcpy(result, "{");
-/*	strcat(result, "\"id\":");
-	
-	strcat(result, "\"");
-	strcat(result, r.id);
-	strcat(result, "\"");
-	
-	strcat(result, ", \"sensor\":");
-	
-	strcat(result, "\"");
-	strcat(result, r.sensor);
-	strcat(result, "\"");
-	
-	strcat(result, ", \"measure\":");
-	
-	strcat(result, "\"");
-	strcat(result, r.measure);
-	strcat(result, "\"");
-	
-	strcat(result, ", \"dataType\":");
-	
-	strcat(result, "\"");
-	strcat(result, r.data_type);
-	strcat(result, "\"");	*/
 	
 	strcat(result, "\"data\":[");
 	
@@ -254,8 +227,9 @@ char * to_json(const struct measurement_object_t r)
 /* Thread for running sensors */
 void * runner(void * unused)
 { 
-	int i = *(int *)(unused); /* Get from unused index of sensor */
+	int i = (int)(unused); /* Get from unused index of sensor */
 	int oldstate, oldtype;
+
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &oldtype);
 	while(1)
@@ -278,8 +252,9 @@ void * runner(void * unused)
 		strcat(tmp_addr, sensors_info[i].id);
 		strcat(tmp_addr, "/index.php");
 			
-		printf("Sending POST to %s\n", tmp_addr);
+		// printf("Sending POST to %s\n", tmp_addr);
 			
+		request(monitor_address, tmp_addr, to_json(result));
 		free(tmp_addr);
 		
 		sleep(sleep_times[i]);
@@ -331,7 +306,7 @@ int main(int argc, char ** argv)
 	{
 		/* Loading sensors */
 		char * lib_name = argv[i];
-		printf("Loading sensor: %s(%d) ...", lib_name, i-1);
+		printf("Loading sensor: %s(%d) ... ", lib_name, i-1);
 		handle[i-1] = dlopen(lib_name, RTLD_LAZY);
 		if(handle[i-1] == NULL)
 		{
@@ -363,10 +338,10 @@ int main(int argc, char ** argv)
 	printf("Testing sensors:\n");
 	for(i = 0 ; i < sensor_count ; i++)
 	{
-		printf("[%d]\n", i);
+		printf(" [%d] ", i);
 		if(sensors[i] == NULL)
 		{
-			printf("\nFAILED\n");
+			printf("FAILED\n");
 			return EXIT_FAILURE;
 		}
 		
@@ -377,40 +352,28 @@ int main(int argc, char ** argv)
 		sensors_info[i].measure = result.measure;
 		sensors_info[i].data_type = result.data_type;
 		
-		printf("ID        : %s\n", result.id);
-		printf("Sensor    : %s\n", result.sensor);
-		printf("Measure   : %s\n", result.measure);
-		printf("Data type : %s\n", result.data_type);
-		printf("Data feed:\n");
-		
-		int j;
-		for(j = 0 ; j < result.df_len ; j++)
-		{
-			printf(" * date : %s\n", result.data_feed[j].date);
-			printf(" * what : %s\n", result.data_feed[j].what);
-			printf("----\n");
-		}
-		
-		printf("OK\n\n");
+		printf("OK\n");
 	} 
 	
 	/* Registering sensors */
 	for(i = 0 ; i < sensor_count ; i++)
 	{
 		char * sid = register_sensor(sensors_info[i]);
-		if(sid == NULL)
-			printf("No response from serwer. Setting id = -1\n");
+		if(sid == NULL) {
+			printf("No response from serwer. Disabling\n");
+			sensor_states[i] = 0;
+		}
 		else
 			sensors_info[i].id = sid;
 		
 	}
 	
 	/* Starting threads */
-	printf("Starting runner threads ...");
+	printf("Starting runner threads:\n");
 	for(i = 0 ; i < sensor_count ; i++)
 	{
-		printf(" * Starting runner %d ...", i);
-		if(pthread_create(&rthread[i], NULL, &runner, (void *)&i) != 0)
+		printf(" * Starting runner %d ... ", i);
+		if(pthread_create(&rthread[i], NULL, &runner, (void *)i) != 0)
 		{
 			printf("FAILED!\n");
 			return EXIT_FAILURE;
@@ -433,9 +396,9 @@ int main(int argc, char ** argv)
 		else
 		if(strcmp(cmd, "list") == 0)
 		{
+			printf("Nr \t\tName\t\t\tPeriod\t\tState\n");
 			for(i = 0 ; i < sensor_count ; i++)
 			{
-				printf("Nr \t\tName\t\t\tPeriod\t\tState\n");
 				printf("%d)\t\t%s\t\t%ds\t\t", i, sensors_info[i].name, sleep_times[i]);
 				if(sensor_states[i] == 1)
 					printf("ENABLED\n");
@@ -486,7 +449,7 @@ int main(int argc, char ** argv)
 	/* Closing sensor handlers */
 	for(i = 0 ; i < sensor_count ; i++)
 	{
-		printf(" * closing sensor %d ...", i);
+		printf(" * closing sensor %d ... ", i);
 		dlclose(handle[i]);
 		printf("OK\n");
 	}
