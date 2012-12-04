@@ -253,41 +253,37 @@ char * to_json(const struct measurement_object_t r)
 
 /* Thread for running sensors */
 void * runner(void * unused)
-{
-	int i;
+{ 
+	int i = *(int *)(unused); /* Get from unused index of sensor */
 	int oldstate, oldtype;
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &oldtype);
 	while(1)
 	{
-		for(i = 0 ; i < sensor_count ; i++)
-		{
-			if(!sensor_states[i])
-				continue;
+		if(!sensor_states[i])
+			continue;
 				
-			struct measurement_object_t result = (sensors[i])();
+		struct measurement_object_t result = (sensors[i])();
 			
-			result.id = sensors_info[i].id;
-			result.sensor = sensors_info[i].href;
+		result.id = sensors_info[i].id;
+		result.sensor = sensors_info[i].href;
 			
-			/* log */
-			FILE * fp = fopen("results", "a");
-			fprintf(fp, "%s\n", to_json(result));
-			fclose(fp);
+		/* log */
+		FILE * fp = fopen("results", "a");
+		fprintf(fp, "%s\n", to_json(result));
+		fclose(fp);
 			
-			char * tmp_addr = (char *)malloc(sizeof(char) * 256);
-			strcpy(tmp_addr, "monitor/sensor/");
-			strcat(tmp_addr, sensors_info[i].id);
-			strcat(tmp_addr, "/index.php");
+		char * tmp_addr = (char *)malloc(sizeof(char) * 256);
+		strcpy(tmp_addr, "monitor/sensor/");
+		strcat(tmp_addr, sensors_info[i].id);
+		strcat(tmp_addr, "/index.php");
 			
-			printf("Sending POST to %s\n", tmp_addr);
-		//	send_post(to_json(result), tmp_addr);
+		printf("Sending POST to %s\n", tmp_addr);
 			
-			free(tmp_addr);
-			
-			sleep(sleep_times[i]);
-			pthread_testcancel();
-		}
+		free(tmp_addr);
+		
+		sleep(sleep_times[i]);
+		pthread_testcancel();
 	}
 }
 
@@ -296,7 +292,7 @@ int main(int argc, char ** argv)
 {
 	char * pname = argv[0];			/* Program name */
 	int i;					/* For loops */
-	pthread_t rthread;			/* Running thread */
+	pthread_t * rthread;			/* Running thread */
 	sensor_count = argc-1;			/* Sensor count */
 
 	if(argc == 1)
@@ -323,6 +319,7 @@ int main(int argc, char ** argv)
 	sensors_info = (struct sensor_info_t *)malloc(sizeof(struct sensor_info_t) * sensor_count);
 	sensor_states = (short int *)malloc(sizeof(short int) * sensor_count);
 	sleep_times = (unsigned int *)malloc(sizeof(unsigned int) * sensor_count);
+	rthread = (pthread_t *)malloc(sizeof(pthread_t) * sensor_count);
 	printf("OK\n");
 	
 	printf("Allocating handles memory ...");
@@ -408,14 +405,18 @@ int main(int argc, char ** argv)
 		
 	}
 	
-	/* Starting thread */
-	printf("Starting runner thread ...");
-	if(pthread_create(&rthread, NULL, &runner, NULL) != 0)
+	/* Starting threads */
+	printf("Starting runner threads ...");
+	for(i = 0 ; i < sensor_count ; i++)
 	{
-		printf("FAILED!\n");
-		return EXIT_FAILURE;
+		printf(" * Starting runner %d ...", i);
+		if(pthread_create(&rthread[i], NULL, &runner, (void *)&i) != 0)
+		{
+			printf("FAILED!\n");
+			return EXIT_FAILURE;
+		}
+		printf("OK\n");
 	}
-	printf("OK\n");
 	
 	/* Main loop - prompt */
 	while(1) 
@@ -473,8 +474,12 @@ int main(int argc, char ** argv)
 		}
 	}
 	
-	printf("Cancelling runner thread ...");
-	pthread_cancel(rthread);
+	printf("Cancelling runner threads ...");
+	for(i = 0 ; i < sensor_count ; i++)
+	{
+		printf(" [%d] ", i);
+		pthread_cancel(rthread[i]);
+	}
 	printf("OK\n");
 	
 	printf("Closing sensors\n");
@@ -490,6 +495,7 @@ int main(int argc, char ** argv)
 	free(sensors_info);
 	free(sensor_states);
 	free((void *)sleep_times);
+	free(rthread);
 
 	return EXIT_SUCCESS;
 }
