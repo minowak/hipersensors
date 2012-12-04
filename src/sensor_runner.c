@@ -197,7 +197,7 @@ char * to_json(const struct measurement_object_t r)
 	int i;
 	
 	strcpy(result, "{");
-	strcat(result, "\"id\":");
+/*	strcat(result, "\"id\":");
 	
 	strcat(result, "\"");
 	strcat(result, r.id);
@@ -219,7 +219,7 @@ char * to_json(const struct measurement_object_t r)
 	
 	strcat(result, "\"");
 	strcat(result, r.data_type);
-	strcat(result, "\"");	
+	strcat(result, "\"");	*/
 	
 	strcat(result, ", \"data\":[");
 	
@@ -319,7 +319,7 @@ int main(int argc, char ** argv)
 
 	printf("Sensors: %d\n", sensor_count);
 	printf("Allocating sensor memory ...");
-	sensors = (sensor_pointer *)malloc(sizeof(sensor_pointer) * (sensor_count));
+	sensors = (sensor_pointer *)malloc(sizeof(sensor_pointer) * sensor_count);
 	sensors_info = (struct sensor_info_t *)malloc(sizeof(struct sensor_info_t) * sensor_count);
 	sensor_states = (short int *)malloc(sizeof(short int) * sensor_count);
 	sleep_times = (unsigned int *)malloc(sizeof(unsigned int) * sensor_count);
