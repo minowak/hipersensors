@@ -79,64 +79,26 @@ char * request (char* hostname, char* api, char* parameters)
 	SEND_RQ("Host: ");
 	SEND_RQ("hostname");
 	SEND_RQ("\r\n");
-	SEND_RQ("Content-Type: application/x-www-form-urlencoded\r\n");
+	SEND_RQ("Content-Type: application/json\r\n");
 
 	SEND_RQ("\r\n");
 	SEND_RQ(parameters);
 	SEND_RQ("\r\n");
 	
-//	printf("POST sent successfully\n");
-	
 	/* Get response */
-	char c1[2048];
-	read(sock, c1, 2048);
-	c1[strlen(c1)-1] = '\0';
+	char response[2048];
+	int ll = read(sock, response, 2048);
 
-	printf("%s\n", c1);
-
-	char * start_p;
-	char * end_p;
-	
-	/* Check for errors */
-	char * tmp_len = strstr(c1, "HTTP/1.1 ");
-	if(tmp_len == NULL)
-		tmp_len = strstr(c1, "HTTP/1.0 ");
-	tmp_len += strlen("HTTP/1.1 ");
-	int pos = tmp_len - c1;
-
-	if(!(c1[pos] == '2' && c1[pos + 1] == '0' && c1[pos + 2] == '0'))
-		return NULL;
-	
-	tmp_len = strstr(c1, "Content-Length: ");
-	tmp_len += strlen("Content-Length");
-	pos = tmp_len - c1;
-	
-	start_p = c1 + (pos+2);
-	end_p = start_p;
-	while(*(end_p + 1) != '\r' )
-		end_p += 1;
-	
-	int c_len = 0;
-	int mul = 1;
-	while(end_p != start_p)
+	char *token = NULL;
+	char *prev_tok = NULL;
+   token = strtok(response, "\n");
+	while (token) 
 	{
-		c_len += ((*end_p) - '\0') * mul;
-		mul *= 10;
-		end_p -= 1;
+		prev_tok = token;
+		token = strtok(NULL, "\n");
 	}
-	
-	if(c_len == 0)
-		return NULL;
-	
-	char * buff = (char *) malloc(sizeof(char) * (c_len + 1));
-	/* CHECK !! */
-	start_p = &c1[strlen(c1) - c_len - 2];
-	memcpy(buff, start_p, c_len);
-	buff[c_len] = '\0';
 
-	printf("dostalem=%s\n", buff);
-	
-	return buff;
+	return prev_tok;//buff;
 }
 
 char * register_sensor(struct sensor_info_t sinfo)
@@ -152,27 +114,21 @@ char * register_sensor(struct sensor_info_t sinfo)
 	strcat(result, "\"name\":\"");
 	strcat(result, sinfo.name);
 	strcat(result, "\",");
-	/* HREF */
 	strcat(result, "\"href\":\"");
 	strcat(result, sinfo.href);
 	strcat(result, "\",");
-	/* MEASURE */
 	strcat(result, "\"measure\":\"");
 	strcat(result, sinfo.measure);
 	strcat(result, "\",");
-	/* DATA TYPE */
 	strcat(result, "\"dataType\":\"");
 	strcat(result, sinfo.data_type);
 	strcat(result, "\",");
-	/* FREQUENCY */
 	strcat(result, "\"frequency\":\"");
 	strcat(result, "0");
 	strcat(result, "\",");
-	/* RESOURCE */
 	strcat(result, "\"resource\":\"");
 	strcat(result, sinfo.resource);
 	strcat(result, "\",");
-	/* TYPE */
 	strcat(result, "\"type\":\"");
 	strcat(result, "simple");
 	strcat(result, "\"");
@@ -199,35 +155,13 @@ char * to_json(const struct measurement_object_t r)
 {
 	char * result = (char *) malloc(sizeof(char) * 4096);
 	int i;
-	
-	strcpy(result, "[{");
-	
-	strcat(result, "\"data\":[");
-	
-	for(i = 0 ; i < r.df_len ; i++)
-	{
-		strcat(result, "{");
+
+	strcpy(result, "{\"measure\"=");
+	strcat(result, "\"");
+	strcat(result, r.data_feed[0].what);
+	strcat(result, "\"");
 		
-		strcat(result, "\"date\":");
-	
-		strcat(result, "\"");
-		strcat(result, r.data_feed[i].date);
-		strcat(result, "\"");
-		
-		strcat(result, ", \"what\":");
-	
-		strcat(result, "\"");
-		strcat(result, r.data_feed[i].what);
-		strcat(result, "\"");
-		
-		strcat(result, "}");
-		
-		if(i != r.df_len - 1)
-			strcat(result, ",");
-	}
-	
-	strcat(result, "]");
-	strcat(result, "}]");
+	strcat(result, "}");
 	
 	return result;
 }
@@ -259,8 +193,6 @@ void * runner(void * unused)
 		strcpy(tmp_addr, REG_SENS_ADDR);
 		strcat(tmp_addr, "/");
 		strcat(tmp_addr, sensors_info[i].id);
-			
-		// printf("Sending POST to %s\n", tmp_addr);
 			
 		request(monitor_address, tmp_addr, to_json(result));
 		free(tmp_addr);

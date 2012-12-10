@@ -9,7 +9,7 @@ char* getLoad(){
 	int status;
 	char* res = malloc(MAX_LEN*sizeof(char));
 		
-	const char cmd[]="w | head -n 1 | sed \"s/.*load average: //\"" ;
+	const char cmd[]="w | head -n 1 | sed \"s/.*load average: //\" | awk '{print $2}'" ;
 
 	if ((fp = popen(cmd, "r")) == NULL){
 		printf("popen error");
@@ -23,6 +23,8 @@ char* getLoad(){
 		return NULL ;
 	} 	
 	
+	res[strlen(res)-2] = '\0';
+
 	return res;	
 	
 }
@@ -85,11 +87,11 @@ struct measurement_object_t get_measurement()
 
 	result.id = "123";
 	result.sensor = "cpusensor";
-	result.measure = "MHz";
-	result.data_type = "int";
+	result.measure = "%";
+	result.data_type = "float";
 	
-	result.data_feed = (struct data_feed_t *) malloc(sizeof(struct data_feed_t) * 2);
-	result.df_len = 2;
+	result.data_feed = (struct data_feed_t *) malloc(sizeof(struct data_feed_t) * 1);
+	result.df_len = 1;
 		
 	date = getDate();
 	result.data_feed[0].date = malloc(sizeof(char)*40);	
@@ -100,16 +102,6 @@ struct measurement_object_t get_measurement()
 	result.data_feed[0].what= malloc(sizeof(char)*20);
 	strcpy(result.data_feed[0].what, load);
 	free(load);	
-
-	date = getDate();
-	result.data_feed[1].date = malloc(sizeof(char)*40);	
-	strcpy(result.data_feed[1].date, date);
-	free(date);
-	
-	mem = getLoad();
-	result.data_feed[1].what= malloc(sizeof(char)*20);
-	strcpy(result.data_feed[1].what, mem);
-	free(mem);
 			
 	return result;
 }

@@ -58,7 +58,7 @@ char* getMem(){
 	int status;
 	char* res = malloc(MAX_LEN*sizeof(char));
 	
-	const char cmd[]="free | awk '{print $3, $2}' | head -n 2 | tail -n 1";
+	const char cmd[]="free | awk '{print $3}' | head -n 2 | tail -n 1";
 
 	if ((fp = popen(cmd, "r")) == NULL){
 		printf("popen error");
@@ -71,7 +71,9 @@ char* getMem(){
 		fprintf(stderr, "pclose error");
 		return NULL ;
 	} 	
-	
+
+	res[strlen(res)-1] = '\0';
+
 	return res;	
 	
 }
@@ -88,8 +90,8 @@ struct measurement_object_t get_measurement()
 	result.measure = "bytes";
 	result.data_type = "int";
 	
-	result.data_feed = (struct data_feed_t *) malloc(sizeof(struct data_feed_t) * 2);
-	result.df_len = 2;
+	result.data_feed = (struct data_feed_t *) malloc(sizeof(struct data_feed_t) * 1);
+	result.df_len = 1;
 		
 	date = getDate();
 	result.data_feed[0].date = malloc(sizeof(char)*40);	
@@ -100,16 +102,6 @@ struct measurement_object_t get_measurement()
 	result.data_feed[0].what= malloc(sizeof(char)*20);
 	strcpy(result.data_feed[0].what, load);
 	free(load);	
-
-	date = getDate();
-	result.data_feed[1].date = malloc(sizeof(char)*40);	
-	strcpy(result.data_feed[1].date, date);
-	free(date);
-	
-	mem = getMem();
-	result.data_feed[1].what= malloc(sizeof(char)*20);
-	strcpy(result.data_feed[1].what, mem);
-	free(mem);
 			
 	return result;
 }
