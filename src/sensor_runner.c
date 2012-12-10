@@ -156,7 +156,7 @@ char * to_json(const struct measurement_object_t r)
 	char * result = (char *) malloc(sizeof(char) * 4096);
 	int i;
 
-	strcpy(result, "{\"measure\"=");
+	strcpy(result, "{\"measure\":");
 	strcat(result, "\"");
 	strcat(result, r.data_feed[0].what);
 	strcat(result, "\"");
