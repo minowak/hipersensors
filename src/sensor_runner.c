@@ -13,6 +13,8 @@
 #define SEND_RQ(MSG) \
   send(sock,MSG,strlen(MSG),0);
 
+#define REG_SENS_ADDR "/monitor/rest/sensor"
+
 sensor_pointer * sensors;
 unsigned int sensor_count;
 void ** handle;
@@ -42,23 +44,26 @@ char * request (char* hostname, char* api, char* parameters)
 	}
 	
     sin.sin_family = AF_INET;
-    sin.sin_port = htons( (unsigned short) 80);
+    sin.sin_port = htons( (unsigned short) 8080);
 
     struct hostent * host_addr = gethostbyname(hostname);
-    
-    if(host_addr == NULL) 
-    {
-		perror("Network error [hostname]");
-		return NULL;
-    }
+
+	 if(host_addr == NULL)
+	 {
+	 		perror("Network error [hostname]");
+			return EXIT_FAILURE;
+	 }	 
     
     sin.sin_addr.s_addr = *((int*)*host_addr->h_addr_list) ;
 
+	printf("connecting...\n");
     if( connect (sock,(const struct sockaddr *)&sin, sizeof(struct sockaddr_in) ) < 0 ) 
     {
 		perror("Network error [connect]");
 		return NULL;
     }
+
+	printf("sending json=%s\n", parameters);
     
 	SEND_RQ("POST ");
 	SEND_RQ(api);
@@ -86,7 +91,9 @@ char * request (char* hostname, char* api, char* parameters)
 	char c1[2048];
 	read(sock, c1, 2048);
 	c1[strlen(c1)-1] = '\0';
-	
+
+	printf("%s\n", c1);
+
 	char * start_p;
 	char * end_p;
 	
@@ -126,6 +133,8 @@ char * request (char* hostname, char* api, char* parameters)
 	start_p = &c1[strlen(c1) - c_len - 2];
 	memcpy(buff, start_p, c_len);
 	buff[c_len] = '\0';
+
+	printf("dostalem=%s\n", buff);
 	
 	return buff;
 }
@@ -133,8 +142,7 @@ char * request (char* hostname, char* api, char* parameters)
 char * register_sensor(struct sensor_info_t sinfo)
 {
 	char * result = (char *) malloc(sizeof(char) * 4096);
-	
-	strcpy(result, "sensor={");
+	strcpy(result, "{");
 	
 	/* ID */
 	strcat(result, "\"id\":\"");
@@ -166,14 +174,14 @@ char * register_sensor(struct sensor_info_t sinfo)
 	strcat(result, "\",");
 	/* TYPE */
 	strcat(result, "\"type\":\"");
-	strcat(result, "null");
+	strcat(result, "simple");
 	strcat(result, "\"");
 	strcat(result, "}");
 	
 	printf("Registering sensor [%s]\n", sinfo.name);
-	//printf("%s\n", result);
+	printf("%s\n", result);
 	
-	return request(monitor_address, "monitor/sensor/index.php", result);
+	return request(monitor_address, REG_SENS_ADDR, result);
 }
 
 /* prints prompt help */
@@ -192,7 +200,7 @@ char * to_json(const struct measurement_object_t r)
 	char * result = (char *) malloc(sizeof(char) * 4096);
 	int i;
 	
-	strcpy(result, "{");
+	strcpy(result, "[{");
 	
 	strcat(result, "\"data\":[");
 	
@@ -219,7 +227,7 @@ char * to_json(const struct measurement_object_t r)
 	}
 	
 	strcat(result, "]");
-	strcat(result, "}");
+	strcat(result, "}]");
 	
 	return result;
 }
@@ -247,10 +255,10 @@ void * runner(void * unused)
 		fprintf(fp, "%s\n", to_json(result));
 		fclose(fp);
 			
-		char * tmp_addr = (char *)malloc(sizeof(char) * 256);
-		strcpy(tmp_addr, "monitor/sensor/");
+		char * tmp_addr = (char *)malloc(sizeof(char) * 1024);
+		strcpy(tmp_addr, REG_SENS_ADDR);
+		strcat(tmp_addr, "/");
 		strcat(tmp_addr, sensors_info[i].id);
-		strcat(tmp_addr, "/index.php");
 			
 		// printf("Sending POST to %s\n", tmp_addr);
 			
