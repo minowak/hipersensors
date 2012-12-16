@@ -43,28 +43,35 @@ char * request (char* hostname, char* api, char* parameters)
 		return NULL;
 	}
 	
-    sin.sin_family = AF_INET;
-    sin.sin_port = htons( (unsigned short) 8080);
+   sin.sin_family = AF_INET;
+   sin.sin_port = htons( (unsigned short) 8080);
 
-    struct hostent * host_addr = gethostbyname(hostname);
+   struct hostent * host_addr = gethostbyname(hostname);
 
-	 if(host_addr == NULL)
-	 {
-	 		perror("Network error [hostname]");
+	if(host_addr == NULL)
+	{
+			perror("Network error [hostname]");
 			return EXIT_FAILURE;
 	 }	 
     
-    sin.sin_addr.s_addr = *((int*)*host_addr->h_addr_list) ;
+   sin.sin_addr.s_addr = *((int*)*host_addr->h_addr_list) ;
 
+   #ifdef DEBUG
 	printf("connecting...\n");
-    if( connect (sock,(const struct sockaddr *)&sin, sizeof(struct sockaddr_in) ) < 0 ) 
-    {
+	#endif
+
+   if( connect (sock,(const struct sockaddr *)&sin, sizeof(struct sockaddr_in) ) < 0 ) 
+   {
 		perror("Network error [connect]");
 		return NULL;
-    }
+   }
 
+	#ifdef DEBUG
 	printf("sending json=%s\n", parameters);
-    
+	printf("to hostname=%s\n", hostname);
+	printf("on api=%s\n", api);
+   #endif 
+
 	SEND_RQ("POST ");
 	SEND_RQ(api);
 	SEND_RQ(" HTTP/1.0\r\n");
@@ -86,8 +93,15 @@ char * request (char* hostname, char* api, char* parameters)
 	SEND_RQ("\r\n");
 	
 	/* Get response */
+	#ifdef DEBUG
+	printf("json send\n");
+	#endif
 	char response[2048];
 	int ll = read(sock, response, 2048);
+
+   #ifdef DEBUG
+	printf("reply=%s\n", response);
+	#endif
 
 	char *token = NULL;
 	char *prev_tok = NULL;
@@ -135,7 +149,10 @@ char * register_sensor(struct sensor_info_t sinfo)
 	strcat(result, "}");
 	
 	printf("Registering sensor [%s]\n", sinfo.name);
+
+	#ifdef DEBUG
 	printf("%s\n", result);
+	#endif
 	
 	return request(monitor_address, REG_SENS_ADDR, result);
 }
@@ -189,10 +206,11 @@ void * runner(void * unused)
 		fprintf(fp, "%s\n", to_json(result));
 		fclose(fp);
 			
-		char * tmp_addr = (char *)malloc(sizeof(char) * 1024);
+		char * tmp_addr = (char *)malloc(sizeof(char) * 2048);
 		strcpy(tmp_addr, REG_SENS_ADDR);
 		strcat(tmp_addr, "/");
 		strcat(tmp_addr, sensors_info[i].id);
+		strcat(tmp_addr, "\r");
 			
 		request(monitor_address, tmp_addr, to_json(result));
 		free(tmp_addr);
