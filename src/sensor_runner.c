@@ -99,6 +99,9 @@ char * request (char* hostname, char* api, char* parameters)
 	char response[2048];
 	int ll = read(sock, response, 2048);
 
+	if(response[strlen(response) - 1] < '0' || response[strlen(response) - 1] > '9')
+		response[strlen(response) - 1] = '\n';
+
    #ifdef DEBUG
 	printf("reply=%s\n", response);
 	#endif
